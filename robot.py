@@ -20,6 +20,7 @@ class ALAZ(wpilib.TimedRobot):
 
     def teleopInit(self):
         print("Manuel mod paşlatıldı")
+        print("değişiklik oldu")
 
         self.drive.forward()
 
