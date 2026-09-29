@@ -1,11 +1,11 @@
 class drive:
 
-    def forward(self):
-        print("İler gidiyor")
+    def drive(self, speed: float, rotation:float):
 
-    def Backward(self):
-        print("Geri gidiyor")
-
-    def stop(self):
-        print("Durdu")
+        #Joystickden gelen girdiler yüzdesel olarak terminale yazdırılır
+        
+        if(speed == 0 and rotation == 0):
+            print("Durdu")
+        else:
+            print(f"Hız: %{speed*100:+.0f} | Dönüş: %{rotation*100:+.0f}")
     
