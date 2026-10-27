@@ -1,6 +1,7 @@
 package frc.robot;
 //Paketler import edilir
 import org.wpilib.math.util.MathUtil;
+import org.wpilib.math.filter.SlewRateLimiter;
 import org.wpilib.math.geometry.Pose2d;
 import org.wpilib.math.geometry.Rotation2d;
 import org.wpilib.framework.TimedRobot;
@@ -18,9 +19,17 @@ public class Robot extends TimedRobot {
   private static final double kMaxLinearSpeed = 3.0; // m/s
   private static final double kMaxAngularSpeed = Math.toRadians(180); // rad/s
 
+  // Slew rate limiter sabitleri (küçük sayı = daha yumuşak, büyük sayı = daha çevik)
+  private static final double kSpeedSlewRate = 1.5; // 1/sn
+  private static final double kRotSlewRate = 2.0; // 1/sn
+
   private final XboxController driverController = new XboxController(0);
   private final Drive drive = new Drive();
   private final Field2d field = new Field2d();
+
+  // Ani hız değişimlerini sınırlayan yumuşatıcılar
+  private final SlewRateLimiter speedLimiter = new SlewRateLimiter(kSpeedSlewRate);
+  private final SlewRateLimiter rotLimiter = new SlewRateLimiter(kRotSlewRate);
 
   // Sanal saha konumu
   private double simX = 8.0;
@@ -58,6 +67,9 @@ public class Robot extends TimedRobot {
   @Override
   public void teleopInit() {
     System.out.println("Manuel mod başlatıldı");
+    // Mod başlarken limiter'ları sıfırla, robot sıçramasın
+    speedLimiter.reset(0);
+    rotLimiter.reset(0);
   }
 
   @Override
@@ -65,6 +77,10 @@ public class Robot extends TimedRobot {
     // Ölü bölge hem uygulanır hem de değer yeniden ölçeklenir
     double yAxis = MathUtil.applyDeadband(-driverController.getLeftY(), kDeadband);
     double xAxis = MathUtil.applyDeadband(-driverController.getRightX(), kDeadband);
+
+    // Ani hız değişimlerini yumuşat (slew rate limiter)
+    yAxis = speedLimiter.calculate(yAxis);
+    xAxis = rotLimiter.calculate(xAxis);
 
     boolean isAPressed = driverController.getAButton(); // şimdilik kullanılmıyor
 
