@@ -10,6 +10,7 @@ import org.wpilib.smartdashboard.Field2d;
 import org.wpilib.telemetry.Telemetry;
 
 import frc.robot.subsystems.Drive;
+import frc.robot.subsystems.EncoderIOSim;
 import frc.robot.subsystems.GyroIOSim;
 
 public class Robot extends TimedRobot {
@@ -24,9 +25,15 @@ public class Robot extends TimedRobot {
   private static final double kSpeedSlewRate = 1.5; // 1/sn
   private static final double kRotSlewRate = 2.0; // 1/sn
 
+  // Sadece simülasyon: joystick 1.0 iken tekerlek hızı (m/s)
+  private static final double kSimMaxWheelSpeed = 3.0;
+
   private final XboxController driverController = new XboxController(0);
   private final Drive drive = new Drive();
   private final GyroIOSim gyro = new GyroIOSim();
+  // Robot gelince EncoderIOHardware kullanılacak
+  private final EncoderIOSim leftEncoder = new EncoderIOSim();
+  private final EncoderIOSim rightEncoder = new EncoderIOSim();
   private final Field2d field = new Field2d();
 
   // Ani hız değişimlerini sınırlayan yumuşatıcılar
@@ -47,6 +54,13 @@ public class Robot extends TimedRobot {
     double w = rotation * kMaxAngularSpeed;
     gyro.update(w, kDt);
 
+    // Arcade sürüş: dönüş iki tarafa ters işaretle eklenir, 1'i aşarsa oran bozulmadan sıkıştırılır
+    double left = speed - rotation;
+    double right = speed + rotation;
+    double max = Math.max(1.0, Math.max(Math.abs(left), Math.abs(right)));
+    leftEncoder.update(left / max * kSimMaxWheelSpeed, kDt);
+    rightEncoder.update(right / max * kSimMaxWheelSpeed, kDt);
+
     simHeading += w * kDt;
     simX += v * Math.cos(simHeading) * kDt;
     simY += v * Math.sin(simHeading) * kDt;
@@ -57,6 +71,11 @@ public class Robot extends TimedRobot {
   @Override
   public void robotPeriodic() {
     Telemetry.log("Field", field);
+    // Encoder değerlerini (mesafe, hız) panele gönderir
+    Telemetry.log("Encoders/LeftDistanceM", leftEncoder.getDistanceMeters());
+    Telemetry.log("Encoders/RightDistanceM", rightEncoder.getDistanceMeters());
+    Telemetry.log("Encoders/LeftVelocityMps", leftEncoder.getVelocityMetersPerSec());
+    Telemetry.log("Encoders/RightVelocityMps", rightEncoder.getVelocityMetersPerSec());
   }
 
   @Override
@@ -73,6 +92,9 @@ public class Robot extends TimedRobot {
     // Mod başlarken limiter'ları sıfırla, robot sıçramasın
     speedLimiter.reset(0);
     rotLimiter.reset(0);
+    // Her teleop başında encoder'ları sıfırla
+    leftEncoder.reset();
+    rightEncoder.reset();
   }
 
   @Override
@@ -85,17 +107,17 @@ public class Robot extends TimedRobot {
     yAxis = speedLimiter.calculate(yAxis);
     xAxis = rotLimiter.calculate(xAxis);
 
-    boolean isAPressed = driverController.getAButton(); // şimdilik kullanılmıyor
+    boolean isAPressed = driverController.getAButton();
     if (isAPressed) {
-  System.out.println("Gyro: " + gyro.getRotation().getDegrees() + " derece");
-}
-if (driverController.getBButton()) {
-  gyro.zero();
-}
+      System.out.println("Gyro: " + gyro.getRotation().getDegrees() + " derece");
+    }
+    if (driverController.getBButton()) {
+      gyro.zero();
+    }
 
     drive.drive(yAxis, xAxis);
 
-    // Sadece simülasyonda sanal sahayı güncelle
+    // Sadece simülasyonda sanal sahayı, gyro'yu ve encoder'ları güncelle
     if (isSimulation()) {
       updateSimField(yAxis, xAxis);
     }
