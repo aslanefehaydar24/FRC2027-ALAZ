@@ -10,6 +10,7 @@ import org.wpilib.smartdashboard.Field2d;
 import org.wpilib.telemetry.Telemetry;
 
 import frc.robot.subsystems.Drive;
+import frc.robot.subsystems.GyroIOSim;
 
 public class Robot extends TimedRobot {
 
@@ -25,6 +26,7 @@ public class Robot extends TimedRobot {
 
   private final XboxController driverController = new XboxController(0);
   private final Drive drive = new Drive();
+  private final GyroIOSim gyro = new GyroIOSim();
   private final Field2d field = new Field2d();
 
   // Ani hız değişimlerini sınırlayan yumuşatıcılar
@@ -43,6 +45,7 @@ public class Robot extends TimedRobot {
   private void updateSimField(double speed, double rotation) {
     double v = speed * kMaxLinearSpeed;
     double w = rotation * kMaxAngularSpeed;
+    gyro.update(w, kDt);
 
     simHeading += w * kDt;
     simX += v * Math.cos(simHeading) * kDt;
@@ -83,6 +86,12 @@ public class Robot extends TimedRobot {
     xAxis = rotLimiter.calculate(xAxis);
 
     boolean isAPressed = driverController.getAButton(); // şimdilik kullanılmıyor
+    if (isAPressed) {
+  System.out.println("Gyro: " + gyro.getRotation().getDegrees() + " derece");
+}
+if (driverController.getBButton()) {
+  gyro.zero();
+}
 
     drive.drive(yAxis, xAxis);
 
